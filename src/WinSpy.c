@@ -13,6 +13,7 @@
 #define WIN32_LEAN_AND_MEAN
 
 #include <windows.h>
+#include <string.h>
 #include <tchar.h>
 #include <commctrl.h>
 
@@ -719,9 +720,9 @@ BOOL WinSpyDlg_SysColorChange(HWND hwnd)
 void DumpRect(HWND hwnd)
 {
 	RECT  rect;
-	TCHAR ach[80];
+	TCHAR ach[80] = {0};
 	GetWindowRect(hwnd, &rect);
-	wsprintf(ach, _T("%d %d %d %d\n"), rect.left, rect.top, rect.right, rect.bottom);
+	swprintf_s(ach, ARRAYSIZE(ach), _T("%d %d %d %d\n"), rect.left, rect.top, rect.right, rect.bottom);
 	OutputDebugString(ach);
 
 }

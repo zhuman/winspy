@@ -526,8 +526,10 @@ void InitGlobalWindowTree(HWND hwndTree)
 	//only need to create the image list once.
 	if(hImgList == 0)
 	{
+		int iconSize = 16 * GetDpiForWindow(hwndTree) / 96;
+
 		// Create an empty image list
-		hImgList = ImageList_Create(16,16,ILC_COLOR32 /*ILC_COLORDDB*/|ILC_MASK,NUM_CLASS_BITMAPS,8);
+		hImgList = ImageList_Create(iconSize, iconSize,ILC_COLOR32 /*ILC_COLORDDB*/|ILC_MASK,NUM_CLASS_BITMAPS,8);
 	
 		// Load our bitmap and add it to the image list
 		hBitmap = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_WINDOW_VISIBLE));

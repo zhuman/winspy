@@ -19,52 +19,6 @@
 #include "WinSpy.h"
 #include "resource.h"
 
-#include <tlhelp32.h>
-
-
-typedef BOOL  (WINAPI * EnumProcessModulesProc )(HANDLE, HMODULE *, DWORD, LPDWORD);
-typedef DWORD (WINAPI * GetModuleBaseNameProc  )(HANDLE, HMODULE, LPTSTR, DWORD);
-typedef DWORD (WINAPI * GetModuleFileNameExProc)(HANDLE, HMODULE, LPTSTR, DWORD);
-
-BOOL GetProcessNameByPid1(DWORD dwProcessId, TCHAR szName[], DWORD nNameSize, TCHAR szPath[], DWORD nPathSize)
-{
-	HANDLE h = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	PROCESSENTRY32 pe = { sizeof(pe) };
-	BOOL fFound = FALSE;
-
-	szPath[0] = '\0';
-	szName[0] = '\0';
-
-	if(Process32First(h, &pe))
-	{
-		do
-		{
-			if(pe.th32ProcessID == dwProcessId)
-			{
-				if(szName)
-				{
-					lstrcpyn(szName, pe.szExeFile, nNameSize);
-				}
-
-				if(szPath)
-				{
-					//OpenProcess(
-					lstrcpyn(szPath, pe.szExeFile, nPathSize);
-				}
-
-				fFound = TRUE;
-				break;
-			}
-		}
-		while(Process32Next(h, &pe));
-	}
-
-	CloseHandle(h);
-
-	return fFound;
-}
-
-
 //
 // This uses PSAPI.DLL, which is only available under NT/2000/XP I think,
 // so we dynamically load this library, so that we can still run under 9x.
@@ -77,74 +31,42 @@ BOOL GetProcessNameByPid1(DWORD dwProcessId, TCHAR szName[], DWORD nNameSize, TC
 //
 BOOL GetProcessNameByPid(DWORD dwProcessId, TCHAR szName[], DWORD nNameSize, TCHAR szPath[], DWORD nPathSize)
 {
-	HMODULE hPSAPI;
 	HANDLE hProcess;
 
 	HMODULE hModule;
 	DWORD   dwNumModules;
-
-	EnumProcessModulesProc  fnEnumProcessModules;
-	GetModuleBaseNameProc   fnGetModuleBaseName;
-	GetModuleFileNameExProc fnGetModuleFileNameEx;
-	
-	// Attempt to load Process Helper library
-	hPSAPI = LoadLibrary(_T("psapi.dll"));
-
-	if(!hPSAPI) 
-	{
-		szName[0] = '\0';
-		return FALSE;
-	}
 	
 	// OK, we have access to the PSAPI functions, so open the process
 	hProcess = OpenProcess(
 		//PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, 
-		PROCESS_QUERY_LIMITED_INFORMATION|PROCESS_VM_READ,
+		PROCESS_QUERY_LIMITED_INFORMATION,
 		FALSE, dwProcessId);
 
 	if(!hProcess) 
 	{
-		FreeLibrary(hPSAPI);
 		return FALSE;
 	}
 
+	szName[0] = _T('\0');
+	szPath[0] = _T('\0');
 
-	fnEnumProcessModules  = (EnumProcessModulesProc)GetProcAddress(hPSAPI, "EnumProcessModules");
+	TCHAR TempPath[MAX_PATH];
+	DWORD TempPathSize = ARRAYSIZE(TempPath);
 
-#ifdef UNICODE	
-	fnGetModuleBaseName   = (GetModuleBaseNameProc)  GetProcAddress(hPSAPI, "GetModuleBaseNameW");
-	fnGetModuleFileNameEx = (GetModuleFileNameExProc)GetProcAddress(hPSAPI, "GetModuleFileNameExW");
-#else
-	fnGetModuleBaseName   = (GetModuleBaseNameProc)  GetProcAddress(hPSAPI, "GetModuleBaseNameA");
-	fnGetModuleFileNameEx = (GetModuleFileNameExProc)GetProcAddress(hPSAPI, "GetModuleFileNameExA");
-#endif
-
-	if(!fnEnumProcessModules || !fnGetModuleBaseName)
+	if (QueryFullProcessImageName(hProcess, 0, TempPath, &TempPathSize))
 	{
-		CloseHandle(hProcess);
-		FreeLibrary(hPSAPI);
-		return FALSE;
-	}
-	
-	// Find the first module
-	if(fnEnumProcessModules(hProcess, &hModule, sizeof(hModule), &dwNumModules))
-	{
-		// Now get the module name
-		if(szName)
-			fnGetModuleBaseName(hProcess, hModule, szName, nNameSize);
+		if (szPath)
+			wcsncpy_s(szPath, nPathSize, TempPath, ARRAYSIZE(TempPath));
 
-		// get module filename
-		if(szPath)
-			fnGetModuleFileNameEx(hProcess, hModule, szPath, nPathSize);
-	}
-	else
-	{
-		szName[0] = _T('\0');
-		szPath[0] = _T('\0');
+		TCHAR* szNameString = wcsrchr(TempPath, L'\\');
+		if (szNameString != NULL)
+			szNameString++;
+
+		if (szName)
+			wcsncpy_s(szName, nNameSize, szNameString, ARRAYSIZE(TempPath));
 	}
 	
 	CloseHandle(hProcess);
-	FreeLibrary(hPSAPI);
 
 	return TRUE;
 }
