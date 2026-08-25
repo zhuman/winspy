@@ -102,16 +102,16 @@ int WINAPI GetRectWidth(RECT *rect)
 //	Convert the specified string (with a hex-number in it)
 //  into the equivalent hex-value
 //
-UINT _tstrtoib16(TCHAR *szHexStr)
+UINT_PTR _tstrtoib16(TCHAR *szHexStr)
 {
-	UINT  num = 0;
+	UINT_PTR  num = 0;
 
 	TCHAR *hexptr = szHexStr;
-	UINT  ch = *hexptr++;
+	UINT_PTR  ch = *hexptr++;
 
-	while(isxdigit(ch))
+	while(isxdigit((int)ch))
 	{
-		UINT x = ch - _T('0');
+		UINT_PTR x = ch - _T('0');
 		if(x > 9 && x <= 42) x -= 7;		//A-Z
 		else if(x > 42)   x -= 39;			//a-z
 					
@@ -122,7 +122,7 @@ UINT _tstrtoib16(TCHAR *szHexStr)
 	return num;
 }
 
-DWORD GetNumericValue(HWND hwnd, int base)
+DWORD_PTR GetNumericValue(HWND hwnd, int base)
 {
 	TCHAR szAddressText[128];
 
@@ -143,9 +143,9 @@ DWORD GetNumericValue(HWND hwnd, int base)
 	}
 }
 
-DWORD GetDlgItemBaseInt(HWND hwnd, UINT ctrlid, int base)
+DWORD_PTR GetDlgItemBaseInt(HWND hwnd, UINT ctrlid, int base)
 {
-	return (DWORD)GetNumericValue(GetDlgItem(hwnd, ctrlid), base);
+	return (DWORD_PTR)GetNumericValue(GetDlgItem(hwnd, ctrlid), base);
 }
 
 //
@@ -239,4 +239,98 @@ TCHAR *GetVersionString(TCHAR *szFileName, TCHAR *szValue, TCHAR *szBuffer, ULON
 
 	free(ver);
 	return result ? szBuffer : NULL;
+}
+
+
+//
+//	Compare Arch (32 or 64 bit) of our process with the process of the input window
+//
+BOOL ProcessArchMatches(HWND hwnd)
+{
+	static FARPROC fnIsWow64Process = NULL;
+	static BOOL bIsWow64ProcessAbsents = FALSE;
+	DWORD dwProcessId;
+	HANDLE hProcess;
+	BOOL bIsWow64Process;
+	BOOL bSuccess;
+
+	if(GetProcessorArchitecture() == PROCESSOR_ARCHITECTURE_INTEL)
+		return TRUE;
+
+	if(!fnIsWow64Process)
+	{
+		if(bIsWow64ProcessAbsents)
+		{
+#ifdef _WIN64
+			return FALSE;
+#else // ifndef _WIN64
+			return TRUE;
+#endif // _WIN64
+		}
+
+		fnIsWow64Process = GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
+		if(!fnIsWow64Process)
+		{
+			bIsWow64ProcessAbsents = TRUE;
+
+#ifdef _WIN64
+			return FALSE;
+#else // ifndef _WIN64
+			return TRUE;
+#endif // _WIN64
+		}
+	}
+
+	GetWindowThreadProcessId(hwnd, &dwProcessId);
+
+	hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwProcessId);
+	if(!hProcess)
+		return FALSE; // assume no match, to be on the safe side
+
+	bSuccess = ((BOOL (WINAPI *)(HANDLE, PBOOL))fnIsWow64Process)(hProcess, &bIsWow64Process);
+
+	CloseHandle(hProcess);
+
+	if(bSuccess)
+	{
+#ifdef _WIN64
+		return !bIsWow64Process;
+#else // ifndef _WIN64
+		return bIsWow64Process;
+#endif // _WIN64
+	}
+	else
+		return FALSE; // assume no match, to be on the safe side
+}
+
+
+//
+// Assumes to support only PROCESSOR_ARCHITECTURE_INTEL and PROCESSOR_ARCHITECTURE_AMD64
+//
+WORD GetProcessorArchitecture()
+{
+#ifdef _WIN64
+	return PROCESSOR_ARCHITECTURE_AMD64;
+#else // ifndef _WIN64
+	static WORD wProcessorArchitecture = PROCESSOR_ARCHITECTURE_UNKNOWN;
+
+	if(wProcessorArchitecture == PROCESSOR_ARCHITECTURE_UNKNOWN)
+	{
+		FARPROC fnGetNativeSystemInfo = NULL;
+		SYSTEM_INFO siSystemInfo;
+
+		fnGetNativeSystemInfo = GetProcAddress(GetModuleHandle(TEXT("kernel32")), "GetNativeSystemInfo");
+
+		if(fnGetNativeSystemInfo)
+		{
+			((VOID (WINAPI *)(LPSYSTEM_INFO))fnGetNativeSystemInfo)(&siSystemInfo);
+
+			wProcessorArchitecture = siSystemInfo.wProcessorArchitecture;
+		}
+		else
+			wProcessorArchitecture = PROCESSOR_ARCHITECTURE_INTEL;
+	}
+
+	return wProcessorArchitecture;
+#endif // _WIN64
 }

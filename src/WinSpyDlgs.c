@@ -479,7 +479,7 @@ LRESULT CALLBACK PropertyDlgProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lPa
 
 		// Insert "Handle" header-item
 		lvcol.mask = LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
-		lvcol.cx   = 100;
+		lvcol.cx   = 20+12*sizeof(LONG_PTR);
 		lvcol.iSubItem = 0;
 		lvcol.pszText = _T("Handle");
 		ListView_InsertColumn(hwndList1, 0, &lvcol);
@@ -517,7 +517,7 @@ LRESULT CALLBACK ClassDlgProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam
 		{
 			SetTextColor((HDC)wParam, GetSysColor(COLOR_WINDOWTEXT));
 			SetBkColor((HDC)wParam, GetSysColor(COLOR_WINDOW));
-			return (BOOL)GetSysColorBrush(COLOR_WINDOW);
+			return (LRESULT)GetSysColorBrush(COLOR_WINDOW);
 		}
 		else
 			return FALSE;
@@ -629,7 +629,7 @@ LRESULT CALLBACK ProcessDlgProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lPar
 		{
 			SetTextColor ((HDC)wParam, GetSysColor(COLOR_WINDOWTEXT));
 			SetBkColor   ((HDC)wParam, GetSysColor(COLOR_WINDOW));
-			return (BOOL)GetSysColorBrush(COLOR_WINDOW);
+			return (LRESULT)GetSysColorBrush(COLOR_WINDOW);
 		}
 
 

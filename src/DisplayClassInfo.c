@@ -23,7 +23,7 @@
 #include "resource.h"
 #include "Utils.h"
 
-#define STYLE_(style) (UINT)style, _T(#style)
+//#define STYLE_(style) {(UINT)style, _T(#style)}
 
 BOOL GetRemoteWindowInfo(HWND hwnd, WNDCLASSEX *pClass, WNDPROC *pProc, TCHAR *pszText, int nTextLen);
 
@@ -189,20 +189,20 @@ void InitStockStyleLists()
 {
 	int i;
 	for(i = 0; i < NUM_ICON_STYLES; i++)
-		IconLookup[i].style = (UINT)LoadIcon(NULL, MAKEINTRESOURCE(IconLookup[i].style));
+		IconLookup[i].style = (UINT_PTR)LoadIcon(NULL, MAKEINTRESOURCE(IconLookup[i].style));
 
 	for(i = 0; i < NUM_CURSOR_STYLES; i++)
-		CursorLookup[i].style = (UINT)LoadCursor(NULL, MAKEINTRESOURCE(CursorLookup[i].style));
+		CursorLookup[i].style = (UINT_PTR)LoadCursor(NULL, MAKEINTRESOURCE(CursorLookup[i].style));
 
 	for(i = 0; i < NUM_BRUSH_STYLES; i++)
 	{
-		BrushLookup2[i].style = (UINT)GetSysColorBrush(BrushLookup[i].style);
+		BrushLookup2[i].style = (UINT_PTR)GetSysColorBrush((int)BrushLookup[i].style);
 		BrushLookup2[i].szName = BrushLookup[i].szName;
 	}
 
 	for(i = 0; i < NUM_STKBR_STYLES; i++)
 	{
-		BrushLookup2[i+NUM_BRUSH_STYLES].style = (UINT)GetStockObject(StkBrLookup[i].style);
+		BrushLookup2[i+NUM_BRUSH_STYLES].style = (UINT_PTR)GetStockObject((int)StkBrLookup[i].style);
 		BrushLookup2[i+NUM_BRUSH_STYLES].szName = StkBrLookup[i].szName;
 	}
 
@@ -269,7 +269,7 @@ void SetClassInfo(HWND hwnd)
 	SetDlgItemText(hwndDlg, IDC_WINDOWBYTES, ach);
 
 	//menu (not implemented)
-	wsprintf(ach, szHexFmt, GetClassLongPtr(hwnd, GCLP_MENUNAME));
+	wsprintf(ach, szPtrFmt, GetClassLongPtr(hwnd, GCLP_MENUNAME));
 	SetDlgItemText(hwndDlg, IDC_MENUHANDLE, _T("(None)"));
 
 	//cursor handle
@@ -306,7 +306,7 @@ void SetClassInfo(HWND hwnd)
 	}
 	else					
 	{
-		wsprintf(ach, szHexFmt, spy_WndProc);
+		wsprintf(ach, szPtrFmt, spy_WndProc);
 		if(spy_WndProc != spy_WndClassEx.lpfnWndProc)
 			lstrcat(ach, _T(" (Subclassed)"));
 	}
@@ -319,14 +319,14 @@ void SetClassInfo(HWND hwnd)
 	if(spy_WndClassEx.lpfnWndProc == 0)
 		wsprintf(ach, _T("N/A"));
 	else
-		wsprintf(ach, szHexFmt, spy_WndClassEx.lpfnWndProc);
+		wsprintf(ach, szPtrFmt, spy_WndClassEx.lpfnWndProc);
 
 	SetDlgItemText(hwndDlg, IDC_CLASSPROC, ach);
 
 
 	
 	//instance handle
-	wsprintf(ach, szHexFmt, spy_WndClassEx.hInstance);
+	wsprintf(ach, szPtrFmt, spy_WndClassEx.hInstance);
 	SetDlgItemText(hwndDlg, IDC_INSTANCEHANDLE, ach);
 
 	//
