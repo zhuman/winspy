@@ -83,7 +83,7 @@ INT_PTR CALLBACK StyleEditProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lPara
 	HWND hwndList;
 
 	DWORD dwStyle = 0;
-	TCHAR szText[32];
+	TCHAR szText[128];
 
 	switch(iMsg)
 	{
@@ -135,11 +135,19 @@ INT_PTR CALLBACK StyleEditProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lPara
 
 			dwStyle = GetDlgItemBaseInt(hwnd, IDC_EDIT1, 16);
 
+			DWORD retValue = 0;
 			if(state->fExtended)
-				SetWindowLong(state->hwndTarget, GWL_EXSTYLE, dwStyle);
+				retValue = SetWindowLongPtr(state->hwndTarget, GWL_EXSTYLE, dwStyle);
 			else
-				SetWindowLong(state->hwndTarget, GWL_STYLE, dwStyle);
+				retValue = SetWindowLongPtr(state->hwndTarget, GWL_STYLE, dwStyle);
 			
+			if (retValue == 0)
+			{
+				wsprintf(szText, _T("Unable to apply the new window style."));
+				MessageBox(hwnd, szText, szAppName, MB_OK | MB_ICONINFORMATION);
+				GetLastError();
+			}
+
 			SetWindowPos(state->hwndTarget, 0,
 				0,0,0,0,
 				SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|
